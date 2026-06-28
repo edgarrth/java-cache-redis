@@ -1,0 +1,67 @@
+### Health
+GET http://localhost:8081/actuator/health
+
+### Load merchant variables
+PUT http://localhost:8081/api/v1/merchants/merchant-001/variables
+Content-Type: application/json
+
+{
+  "pspRoutingKey": "niubiz-primary",
+  "threeDsRequired": "true",
+  "maxAmountWithoutReview": "500.00",
+  "tokenAudience": "demo-card-gateway"
+}
+
+### Get risk profile: first call = PostgreSQL miss, second call = Redis @Cacheable hit
+GET http://localhost:8081/api/v1/merchants/merchant-001/risk-profile
+
+### Process approved payment
+POST http://localhost:8081/api/v1/payments
+Content-Type: application/json
+
+{
+  "idempotencyKey": "idem-demo-merchant-001-0001",
+  "merchantId": "merchant-001",
+  "customerId": "customer-9001",
+  "amount": 125.50,
+  "currency": "PEN",
+  "paymentMethod": {
+    "type": "CARD",
+    "token": "tok_card_demo_visa"
+  }
+}
+
+### Replay same payment: Redis distributed idempotency should return existing payment
+POST http://localhost:8081/api/v1/payments
+Content-Type: application/json
+
+{
+  "idempotencyKey": "idem-demo-merchant-001-0001",
+  "merchantId": "merchant-001",
+  "customerId": "customer-9001",
+  "amount": 125.50,
+  "currency": "PEN",
+  "paymentMethod": {
+    "type": "CARD",
+    "token": "tok_card_demo_visa"
+  }
+}
+
+### Simulate gateway decline
+POST http://localhost:8081/api/v1/payments
+Content-Type: application/json
+
+{
+  "idempotencyKey": "idem-demo-merchant-001-declined",
+  "merchantId": "merchant-001",
+  "customerId": "customer-9002",
+  "amount": 80.00,
+  "currency": "PEN",
+  "paymentMethod": {
+    "type": "CARD",
+    "token": "tok_card_declined"
+  }
+}
+
+### Cache diagnostics: Redis distributed vs Caffeine local
+GET http://localhost:8081/api/v1/cache/observability

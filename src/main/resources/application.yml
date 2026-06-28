@@ -1,0 +1,48 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: payment-processing-java25-poc
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/paymentdb}
+    username: ${POSTGRES_USER:payment_user}
+    password: ${POSTGRES_PASSWORD:payment_pass}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      timeout: 3s
+      connect-timeout: 3s
+      cluster:
+        nodes: ${REDIS_CLUSTER_NODES:redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005}
+        max-redirects: 6
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,caches
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+payment-processing:
+  cache:
+    merchant-risk-ttl: 10m
+    idempotency-ttl: 24h
+    gateway-token-ttl: 2m
+  psp:
+    client-id: demo-payment-service
+    token-audience: demo-card-gateway

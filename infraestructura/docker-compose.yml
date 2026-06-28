@@ -1,0 +1,109 @@
+name: payment-processing-java25-poc
+
+services:
+  postgres:
+    build:
+      context: ..
+      dockerfile: infraestructura/docker/postgres/Dockerfile
+    container_name: payment-postgres
+    environment:
+      POSTGRES_DB: paymentdb
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_pass
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d paymentdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - payment_postgres_data:/var/lib/postgresql/data
+
+  redis-node-1:
+    image: redis:8-alpine
+    container_name: redis-node-1
+    hostname: redis-node-1
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7000", "--cluster-announce-ip", "redis-node-1", "--cluster-announce-port", "7000", "--cluster-announce-bus-port", "17000"]
+    ports: ["7000:7000", "17000:17000"]
+    volumes: ["./redis/redis-node.conf:/usr/local/etc/redis/redis.conf"]
+
+  redis-node-2:
+    image: redis:8-alpine
+    container_name: redis-node-2
+    hostname: redis-node-2
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7001", "--cluster-announce-ip", "redis-node-2", "--cluster-announce-port", "7001", "--cluster-announce-bus-port", "17001"]
+    ports: ["7001:7001", "17001:17001"]
+    volumes: ["./redis/redis-node.conf:/usr/local/etc/redis/redis.conf"]
+
+  redis-node-3:
+    image: redis:8-alpine
+    container_name: redis-node-3
+    hostname: redis-node-3
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7002", "--cluster-announce-ip", "redis-node-3", "--cluster-announce-port", "7002", "--cluster-announce-bus-port", "17002"]
+    ports: ["7002:7002", "17002:17002"]
+    volumes: ["./redis/redis-node.conf:/usr/local/etc/redis/redis.conf"]
+
+  redis-node-4:
+    image: redis:8-alpine
+    container_name: redis-node-4
+    hostname: redis-node-4
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7003", "--cluster-announce-ip", "redis-node-4", "--cluster-announce-port", "7003", "--cluster-announce-bus-port", "17003"]
+    ports: ["7003:7003", "17003:17003"]
+    volumes: ["./redis/redis-node.conf:/usr/local/etc/redis/redis.conf"]
+
+  redis-node-5:
+    image: redis:8-alpine
+    container_name: redis-node-5
+    hostname: redis-node-5
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7004", "--cluster-announce-ip", "redis-node-5", "--cluster-announce-port", "7004", "--cluster-announce-bus-port", "17004"]
+    ports: ["7004:7004", "17004:17004"]
+    volumes: ["./redis/redis-node.conf:/usr/local/etc/redis/redis.conf"]
+
+  redis-node-6:
+    image: redis:8-alpine
+    container_name: redis-node-6
+    hostname: redis-node-6
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7005", "--cluster-announce-ip", "redis-node-6", "--cluster-announce-port", "7005", "--cluster-announce-bus-port", "17005"]
+    ports: ["7005:7005", "17005:17005"]
+    volumes: ["./redis/redis-node.conf:/usr/local/etc/redis/redis.conf"]
+
+  redis-cluster-init:
+    image: redis:8-alpine
+    container_name: redis-cluster-init
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+      - redis-node-4
+      - redis-node-5
+      - redis-node-6
+    entrypoint: >
+      sh -c "
+      sleep 8;
+      redis-cli --cluster create redis-node-1:7000 redis-node-2:7001 redis-node-3:7002 redis-node-4:7003 redis-node-5:7004 redis-node-6:7005 --cluster-replicas 1 --cluster-yes || true;
+      redis-cli -c -h redis-node-1 -p 7000 cluster info || true;
+      "
+
+  app:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: infraestructura/docker/app/Dockerfile
+    container_name: payment-processing-app
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/paymentdb
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_pass
+      REDIS_CLUSTER_NODES: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-cluster-init:
+        condition: service_completed_successfully
+
+volumes:
+  payment_postgres_data:
