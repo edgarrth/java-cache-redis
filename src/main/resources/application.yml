@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: payment-processing-java25-poc
+    name: java-cache-cluster
   threads:
     virtual:
       enabled: true

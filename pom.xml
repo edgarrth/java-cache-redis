@@ -14,8 +14,8 @@
     <groupId>com.edgarrt.poc</groupId>
     <artifactId>payment-processing-java25-poc</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <name>payment-processing-java25-poc</name>
-    <description>PoC Java 25 + Spring Boot 4 + DDD + Hexagonal + Redis Cluster + Caffeine</description>
+    <name>java-cache-cluster</name>
+    <description>PoC Java 25 con Redis Cluster y Caffeine</description>
 
     <properties>
         <java.version>25</java.version>
